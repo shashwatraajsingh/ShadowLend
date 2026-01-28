@@ -1,0 +1,656 @@
+{
+    "version": "0.1.0",
+    "name": "shadow_lend",
+    "instructions": [
+        {
+            "name": "initializePool",
+            "accounts": [
+                {
+                    "name": "pool",
+                    "isMut": true,
+                    "isSigner": false
+                },
+                {
+                    "name": "authority",
+                    "isMut": true,
+                    "isSigner": true
+                },
+                {
+                    "name": "systemProgram",
+                    "isMut": false,
+                    "isSigner": false
+                }
+            ],
+            "args": [
+                {
+                    "name": "collateralMint",
+                    "type": "publicKey"
+                },
+                {
+                    "name": "borrowMint",
+                    "type": "publicKey"
+                },
+                {
+                    "name": "ltvRatio",
+                    "type": "u16"
+                },
+                {
+                    "name": "interestRate",
+                    "type": "u16"
+                },
+                {
+                    "name": "liquidationThreshold",
+                    "type": "u16"
+                }
+            ]
+        },
+        {
+            "name": "openPosition",
+            "accounts": [
+                {
+                    "name": "pool",
+                    "isMut": false,
+                    "isSigner": false
+                },
+                {
+                    "name": "poolMut",
+                    "isMut": true,
+                    "isSigner": false
+                },
+                {
+                    "name": "position",
+                    "isMut": true,
+                    "isSigner": false
+                },
+                {
+                    "name": "owner",
+                    "isMut": true,
+                    "isSigner": true
+                },
+                {
+                    "name": "systemProgram",
+                    "isMut": false,
+                    "isSigner": false
+                }
+            ],
+            "args": []
+        },
+        {
+            "name": "depositCollateral",
+            "accounts": [
+                {
+                    "name": "pool",
+                    "isMut": true,
+                    "isSigner": false
+                },
+                {
+                    "name": "position",
+                    "isMut": true,
+                    "isSigner": false
+                },
+                {
+                    "name": "vault",
+                    "isMut": true,
+                    "isSigner": false
+                },
+                {
+                    "name": "owner",
+                    "isMut": true,
+                    "isSigner": true
+                },
+                {
+                    "name": "systemProgram",
+                    "isMut": false,
+                    "isSigner": false
+                }
+            ],
+            "args": [
+                {
+                    "name": "amount",
+                    "type": "u64"
+                },
+                {
+                    "name": "encryptedAmount",
+                    "type": {
+                        "array": [
+                            "u8",
+                            32
+                        ]
+                    }
+                }
+            ]
+        },
+        {
+            "name": "borrow",
+            "accounts": [
+                {
+                    "name": "pool",
+                    "isMut": false,
+                    "isSigner": false
+                },
+                {
+                    "name": "poolMut",
+                    "isMut": true,
+                    "isSigner": false
+                },
+                {
+                    "name": "position",
+                    "isMut": true,
+                    "isSigner": false
+                },
+                {
+                    "name": "vault",
+                    "isMut": true,
+                    "isSigner": false
+                },
+                {
+                    "name": "owner",
+                    "isMut": true,
+                    "isSigner": true
+                },
+                {
+                    "name": "systemProgram",
+                    "isMut": false,
+                    "isSigner": false
+                }
+            ],
+            "args": [
+                {
+                    "name": "amount",
+                    "type": "u64"
+                },
+                {
+                    "name": "encryptedNewDebt",
+                    "type": {
+                        "array": [
+                            "u8",
+                            32
+                        ]
+                    }
+                },
+                {
+                    "name": "incoProof",
+                    "type": "bytes"
+                }
+            ]
+        },
+        {
+            "name": "repay",
+            "accounts": [
+                {
+                    "name": "pool",
+                    "isMut": true,
+                    "isSigner": false
+                },
+                {
+                    "name": "position",
+                    "isMut": true,
+                    "isSigner": false
+                },
+                {
+                    "name": "vault",
+                    "isMut": true,
+                    "isSigner": false
+                },
+                {
+                    "name": "owner",
+                    "isMut": true,
+                    "isSigner": true
+                },
+                {
+                    "name": "systemProgram",
+                    "isMut": false,
+                    "isSigner": false
+                }
+            ],
+            "args": [
+                {
+                    "name": "amount",
+                    "type": "u64"
+                },
+                {
+                    "name": "encryptedNewDebt",
+                    "type": {
+                        "array": [
+                            "u8",
+                            32
+                        ]
+                    }
+                }
+            ]
+        },
+        {
+            "name": "withdrawCollateral",
+            "accounts": [
+                {
+                    "name": "pool",
+                    "isMut": true,
+                    "isSigner": false
+                },
+                {
+                    "name": "position",
+                    "isMut": true,
+                    "isSigner": false
+                },
+                {
+                    "name": "vault",
+                    "isMut": true,
+                    "isSigner": false
+                },
+                {
+                    "name": "owner",
+                    "isMut": true,
+                    "isSigner": true
+                },
+                {
+                    "name": "systemProgram",
+                    "isMut": false,
+                    "isSigner": false
+                }
+            ],
+            "args": [
+                {
+                    "name": "amount",
+                    "type": "u64"
+                },
+                {
+                    "name": "encryptedNewCollateral",
+                    "type": {
+                        "array": [
+                            "u8",
+                            32
+                        ]
+                    }
+                },
+                {
+                    "name": "incoProof",
+                    "type": "bytes"
+                }
+            ]
+        },
+        {
+            "name": "liquidate",
+            "accounts": [
+                {
+                    "name": "pool",
+                    "isMut": true,
+                    "isSigner": false
+                },
+                {
+                    "name": "position",
+                    "isMut": true,
+                    "isSigner": false
+                },
+                {
+                    "name": "vault",
+                    "isMut": true,
+                    "isSigner": false
+                },
+                {
+                    "name": "liquidator",
+                    "isMut": true,
+                    "isSigner": true
+                },
+                {
+                    "name": "systemProgram",
+                    "isMut": false,
+                    "isSigner": false
+                }
+            ],
+            "args": [
+                {
+                    "name": "incoProof",
+                    "type": "bytes"
+                }
+            ]
+        },
+        {
+            "name": "closePosition",
+            "accounts": [
+                {
+                    "name": "pool",
+                    "isMut": true,
+                    "isSigner": false
+                },
+                {
+                    "name": "position",
+                    "isMut": true,
+                    "isSigner": false
+                },
+                {
+                    "name": "owner",
+                    "isMut": true,
+                    "isSigner": true
+                }
+            ],
+            "args": []
+        }
+    ],
+    "accounts": [
+        {
+            "name": "Pool",
+            "type": {
+                "kind": "struct",
+                "fields": [
+                    {
+                        "name": "authority",
+                        "type": "publicKey"
+                    },
+                    {
+                        "name": "collateralMint",
+                        "type": "publicKey"
+                    },
+                    {
+                        "name": "borrowMint",
+                        "type": "publicKey"
+                    },
+                    {
+                        "name": "ltvRatio",
+                        "type": "u16"
+                    },
+                    {
+                        "name": "interestRate",
+                        "type": "u16"
+                    },
+                    {
+                        "name": "liquidationThreshold",
+                        "type": "u16"
+                    },
+                    {
+                        "name": "totalDeposits",
+                        "type": "u64"
+                    },
+                    {
+                        "name": "totalBorrows",
+                        "type": "u64"
+                    },
+                    {
+                        "name": "activePositions",
+                        "type": "u64"
+                    },
+                    {
+                        "name": "bump",
+                        "type": "u8"
+                    },
+                    {
+                        "name": "isActive",
+                        "type": "bool"
+                    }
+                ]
+            }
+        },
+        {
+            "name": "Position",
+            "type": {
+                "kind": "struct",
+                "fields": [
+                    {
+                        "name": "owner",
+                        "type": "publicKey"
+                    },
+                    {
+                        "name": "pool",
+                        "type": "publicKey"
+                    },
+                    {
+                        "name": "encryptedCollateral",
+                        "type": {
+                            "array": [
+                                "u8",
+                                32
+                            ]
+                        }
+                    },
+                    {
+                        "name": "encryptedDebt",
+                        "type": {
+                            "array": [
+                                "u8",
+                                32
+                            ]
+                        }
+                    },
+                    {
+                        "name": "lastUpdate",
+                        "type": "i64"
+                    },
+                    {
+                        "name": "isActive",
+                        "type": "bool"
+                    },
+                    {
+                        "name": "bump",
+                        "type": "u8"
+                    }
+                ]
+            }
+        }
+    ],
+    "events": [
+        {
+            "name": "PoolInitialized",
+            "fields": [
+                {
+                    "name": "pool",
+                    "type": "publicKey",
+                    "index": false
+                },
+                {
+                    "name": "collateralMint",
+                    "type": "publicKey",
+                    "index": false
+                },
+                {
+                    "name": "borrowMint",
+                    "type": "publicKey",
+                    "index": false
+                },
+                {
+                    "name": "ltvRatio",
+                    "type": "u16",
+                    "index": false
+                },
+                {
+                    "name": "interestRate",
+                    "type": "u16",
+                    "index": false
+                }
+            ]
+        },
+        {
+            "name": "PositionOpened",
+            "fields": [
+                {
+                    "name": "position",
+                    "type": "publicKey",
+                    "index": false
+                },
+                {
+                    "name": "owner",
+                    "type": "publicKey",
+                    "index": false
+                },
+                {
+                    "name": "pool",
+                    "type": "publicKey",
+                    "index": false
+                }
+            ]
+        },
+        {
+            "name": "CollateralDeposited",
+            "fields": [
+                {
+                    "name": "position",
+                    "type": "publicKey",
+                    "index": false
+                },
+                {
+                    "name": "owner",
+                    "type": "publicKey",
+                    "index": false
+                },
+                {
+                    "name": "amount",
+                    "type": "u64",
+                    "index": false
+                },
+                {
+                    "name": "timestamp",
+                    "type": "i64",
+                    "index": false
+                }
+            ]
+        },
+        {
+            "name": "Borrowed",
+            "fields": [
+                {
+                    "name": "position",
+                    "type": "publicKey",
+                    "index": false
+                },
+                {
+                    "name": "owner",
+                    "type": "publicKey",
+                    "index": false
+                },
+                {
+                    "name": "amount",
+                    "type": "u64",
+                    "index": false
+                },
+                {
+                    "name": "timestamp",
+                    "type": "i64",
+                    "index": false
+                }
+            ]
+        },
+        {
+            "name": "Repaid",
+            "fields": [
+                {
+                    "name": "position",
+                    "type": "publicKey",
+                    "index": false
+                },
+                {
+                    "name": "owner",
+                    "type": "publicKey",
+                    "index": false
+                },
+                {
+                    "name": "amount",
+                    "type": "u64",
+                    "index": false
+                },
+                {
+                    "name": "timestamp",
+                    "type": "i64",
+                    "index": false
+                }
+            ]
+        },
+        {
+            "name": "CollateralWithdrawn",
+            "fields": [
+                {
+                    "name": "position",
+                    "type": "publicKey",
+                    "index": false
+                },
+                {
+                    "name": "owner",
+                    "type": "publicKey",
+                    "index": false
+                },
+                {
+                    "name": "amount",
+                    "type": "u64",
+                    "index": false
+                },
+                {
+                    "name": "timestamp",
+                    "type": "i64",
+                    "index": false
+                }
+            ]
+        },
+        {
+            "name": "PositionLiquidated",
+            "fields": [
+                {
+                    "name": "position",
+                    "type": "publicKey",
+                    "index": false
+                },
+                {
+                    "name": "owner",
+                    "type": "publicKey",
+                    "index": false
+                },
+                {
+                    "name": "liquidator",
+                    "type": "publicKey",
+                    "index": false
+                },
+                {
+                    "name": "timestamp",
+                    "type": "i64",
+                    "index": false
+                }
+            ]
+        },
+        {
+            "name": "PositionClosed",
+            "fields": [
+                {
+                    "name": "position",
+                    "type": "publicKey",
+                    "index": false
+                },
+                {
+                    "name": "owner",
+                    "type": "publicKey",
+                    "index": false
+                }
+            ]
+        }
+    ],
+    "errors": [
+        {
+            "code": 6000,
+            "name": "InvalidAmount",
+            "msg": "Invalid amount: must be greater than 0"
+        },
+        {
+            "code": 6001,
+            "name": "InvalidIncoProof",
+            "msg": "Invalid Inco proof"
+        },
+        {
+            "code": 6002,
+            "name": "InsufficientLiquidity",
+            "msg": "Insufficient liquidity in pool"
+        },
+        {
+            "code": 6003,
+            "name": "PositionHealthy",
+            "msg": "Position is healthy, cannot liquidate"
+        },
+        {
+            "code": 6004,
+            "name": "PositionHasDebt",
+            "msg": "Position has outstanding debt"
+        },
+        {
+            "code": 6005,
+            "name": "Unauthorized",
+            "msg": "Unauthorized"
+        }
+    ],
+    "metadata": {
+        "address": "ShdwLend111111111111111111111111111111111111"
+    }
+}
