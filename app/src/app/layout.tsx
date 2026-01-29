@@ -29,10 +29,16 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en" className={inter.variable} suppressHydrationWarning>
-      <body className="bg-[var(--color-bg-primary)] min-h-screen" suppressHydrationWarning>
+      <head>
+        <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet" />
+        <link href="https://fonts.cdnfonts.com/css/sf-pro-display" rel="stylesheet" />
+      </head>
+      <body className="min-h-screen antialiased text-slate-100" suppressHydrationWarning>
         <AppWalletProvider>
           <Navbar />
-          <main className="pt-16">{children}</main>
+          <div className="relative z-0">
+            {children}
+          </div>
           <Toaster />
         </AppWalletProvider>
       </body>
