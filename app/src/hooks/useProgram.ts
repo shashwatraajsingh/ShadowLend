@@ -5,10 +5,10 @@ import { useConnection, useWallet } from "@solana/wallet-adapter-react";
 import { PublicKey, LAMPORTS_PER_SOL } from "@solana/web3.js";
 import { getPoolPDA, getPositionPDA, PROGRAM_ID } from "@/lib/program";
 import {
-  decryptAmount,
-  deriveEncryptionKey,
-  computeHealthFactor,
-  type EncryptionKeyPair,
+    decryptAmount,
+    deriveEncryptionKey,
+    computeHealthFactor,
+    type EncryptionKeyPair,
 } from "@/lib/encryption";
 
 // Pool account structure (deserialize from on-chain data)
@@ -201,20 +201,24 @@ export function usePosition() {
     const [error, setError] = useState<string | null>(null);
     const [encryptionKey, setEncryptionKey] = useState<EncryptionKeyPair | null>(null);
 
-    // Derive encryption key when wallet connects
-    useEffect(() => {
-        async function deriveKey() {
-            if (signMessage && publicKey && !encryptionKey) {
-                try {
-                    const key = await deriveEncryptionKey(signMessage);
-                    setEncryptionKey(key);
-                } catch (err) {
-                    console.error("Failed to derive encryption key:", err);
-                }
-            }
+    // Encryption key derivation is done on-demand via initializeEncryption
+    // rather than automatically to avoid repeated wallet popups
+    const initializeEncryption = useCallback(async () => {
+        if (!signMessage) {
+            throw new Error("Wallet does not support message signing");
         }
-        deriveKey();
-    }, [signMessage, publicKey, encryptionKey]);
+        if (encryptionKey) {
+            return encryptionKey; // Already initialized
+        }
+        try {
+            const key = await deriveEncryptionKey(signMessage);
+            setEncryptionKey(key);
+            return key;
+        } catch (err) {
+            console.error("Failed to derive encryption key:", err);
+            throw err;
+        }
+    }, [signMessage, encryptionKey]);
 
     const fetchPosition = useCallback(async () => {
         if (!publicKey) {
@@ -302,7 +306,7 @@ export function usePosition() {
         return () => clearInterval(interval);
     }, [fetchPosition]);
 
-    return { position, decrypted, loading, error, refetch: fetchPosition };
+    return { position, decrypted, loading, error, encryptionKey, refetch: fetchPosition, initializeEncryption };
 }
 
 // Decrypt position using the user's encryption key
@@ -348,7 +352,7 @@ function decryptPosition(
             collateralLamports ?? BigInt(0),
             debtLamports ?? BigInt(0),
             LIQUIDATION_THRESHOLD
-          ) / 100 // Convert from percentage to ratio
+        ) / 100 // Convert from percentage to ratio
         : Infinity;
 
     // Calculate max borrow (collateral * LTV - current debt)

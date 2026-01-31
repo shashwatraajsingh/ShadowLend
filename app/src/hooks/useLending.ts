@@ -29,7 +29,12 @@ interface UseLendingResult {
   // Transaction state
   txState: TransactionState;
 
+  // Pool state
+  isPoolInitialized: boolean;
+  poolLoading: boolean;
+
   // Actions
+  initializePool: () => Promise<string>;
   openPosition: () => Promise<string>;
   depositCollateral: (
     amount: string,
@@ -55,6 +60,7 @@ interface UseLendingResult {
 
 // Instruction discriminators (first 8 bytes of sha256("global:<instruction_name>"))
 const DISCRIMINATORS = {
+  initializePool: Buffer.from([0x5f, 0x64, 0x0e, 0x68, 0x17, 0x4b, 0x3f, 0x6c]),
   openPosition: Buffer.from([135, 128, 47, 77, 15, 152, 240, 49]),
   depositCollateral: Buffer.from([138, 147, 160, 52, 220, 190, 117, 13]),
   borrow: Buffer.from([228, 253, 131, 202, 207, 116, 166, 78]),
@@ -66,7 +72,7 @@ const DISCRIMINATORS = {
 export function useLending(): UseLendingResult {
   const { connection } = useConnection();
   const { publicKey, sendTransaction } = useWallet();
-  const { pool, refetch: refetchPool } = usePool();
+  const { pool, loading: poolLoading, refetch: refetchPool } = usePool();
   const { position, decodedPosition, refetch: refetchPosition } = usePosition();
 
   const [txState, setTxState] = useState<TransactionState>({
@@ -121,6 +127,39 @@ export function useLending(): UseLendingResult {
     },
     [connection, publicKey, sendTransaction, refetchPool, refetchPosition]
   );
+
+  // Initialize pool - creates the lending pool on-chain if it doesn't exist
+  const initializePool = useCallback(async (): Promise<string> => {
+    if (!publicKey) throw new Error("Wallet not connected");
+
+    const [poolPDA] = getPoolPDA();
+    const [vaultPDA] = getVaultPDA(poolPDA);
+
+    // Default pool parameters
+    const ltvRatio = 7500; // 75%
+    const interestRate = 500; // 5%
+    const liquidationThreshold = 8000; // 80%
+
+    // Build instruction data: discriminator + ltv_ratio (u16) + interest_rate (u16) + liquidation_threshold (u16)
+    const data = Buffer.alloc(8 + 2 + 2 + 2);
+    DISCRIMINATORS.initializePool.copy(data, 0);
+    data.writeUInt16LE(ltvRatio, 8);
+    data.writeUInt16LE(interestRate, 10);
+    data.writeUInt16LE(liquidationThreshold, 12);
+
+    const instruction = new TransactionInstruction({
+      keys: [
+        { pubkey: poolPDA, isSigner: false, isWritable: true },
+        { pubkey: vaultPDA, isSigner: false, isWritable: true },
+        { pubkey: publicKey, isSigner: true, isWritable: true },
+        { pubkey: SystemProgram.programId, isSigner: false, isWritable: false },
+      ],
+      programId: PROGRAM_ID,
+      data,
+    });
+
+    return executeTransaction(instruction, "deposit");
+  }, [publicKey, executeTransaction]);
 
   const openPosition = useCallback(async (): Promise<string> => {
     if (!publicKey) throw new Error("Wallet not connected");
@@ -371,6 +410,9 @@ export function useLending(): UseLendingResult {
 
   return {
     txState,
+    isPoolInitialized: pool !== null,
+    poolLoading,
+    initializePool,
     openPosition,
     depositCollateral,
     borrow,

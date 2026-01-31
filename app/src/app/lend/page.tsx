@@ -1,60 +1,48 @@
 "use client";
 
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback } from "react";
 import { useWallet } from "@solana/wallet-adapter-react";
 import { WalletMultiButton } from "@solana/wallet-adapter-react-ui";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion } from "framer-motion";
 import { toast } from "sonner";
 import {
-  ArrowDown,
-  ArrowUp,
   Lock,
   Shield,
   AlertTriangle,
   Loader2,
-  ExternalLink,
 } from "lucide-react";
 import { usePool, usePosition, useWalletBalance } from "@/hooks/useProgram";
 import { useLending } from "@/hooks/useLending";
 import { AnimatedTabs } from "@/components/ui/AnimatedTabs";
 import { EncryptedText } from "@/components/ui/EncryptedText";
-import { deriveEncryptionKey, type EncryptionKeyPair } from "@/lib/encryption";
 
 type Action = "deposit" | "borrow" | "repay" | "withdraw";
 
 const actions: { id: Action; label: string; icon: React.ComponentType<{ className?: string }> }[] = [
-  { id: "deposit", label: "Deposit", icon: ArrowDown },
-  { id: "borrow", label: "Borrow", icon: ArrowUp },
-  { id: "repay", label: "Repay", icon: ArrowDown },
-  { id: "withdraw", label: "Withdraw", icon: ArrowUp },
+  { id: "deposit", label: "Deposit", icon: () => <span className="text-sm">↓</span> },
+  { id: "borrow", label: "Borrow", icon: () => <span className="text-sm">↑</span> },
+  { id: "repay", label: "Repay", icon: () => <span className="text-sm">↓</span> },
+  { id: "withdraw", label: "Withdraw", icon: () => <span className="text-sm">↑</span> },
 ];
 
 export default function LendPage() {
-  const { connected, publicKey, signMessage } = useWallet();
+  const { connected, publicKey } = useWallet();
   const [activeAction, setActiveAction] = useState<Action>("deposit");
   const [amount, setAmount] = useState("");
   const [loading, setLoading] = useState(false);
-  const [encryptionKey, setEncryptionKey] = useState<EncryptionKeyPair | null>(null);
 
   const { stats, refetch: refetchPool } = usePool();
-  const { decrypted, refetch: refetchPosition } = usePosition();
+  const { decrypted, encryptionKey, initializeEncryption, refetch: refetchPosition } = usePosition();
   const { balance, refetch: refetchBalance } = useWalletBalance();
-  const { depositCollateral, borrow, repay, withdrawCollateral } = useLending();
-
-  // Derive encryption key when wallet connects
-  useEffect(() => {
-    async function deriveKey() {
-      if (signMessage && publicKey && !encryptionKey) {
-        try {
-          const key = await deriveEncryptionKey(signMessage);
-          setEncryptionKey(key);
-        } catch (err) {
-          console.error("Failed to derive encryption key:", err);
-        }
-      }
-    }
-    deriveKey();
-  }, [signMessage, publicKey, encryptionKey]);
+  const {
+    depositCollateral,
+    borrow,
+    repay,
+    withdrawCollateral,
+    isPoolInitialized,
+    poolLoading,
+    initializePool
+  } = useLending();
 
   const getMaxAmount = useCallback(() => {
     switch (activeAction) {
@@ -74,33 +62,57 @@ export default function LendPage() {
   const handleSubmit = async () => {
     if (!publicKey || !amount || parseFloat(amount) <= 0) return;
 
-    if (!encryptionKey) {
-      toast.error("Encryption not ready", {
-        description: "Please wait for encryption key derivation or reconnect your wallet.",
-      });
-      return;
-    }
-
     try {
       setLoading(true);
       const loadingToast = toast.loading("Processing transaction...", {
+        description: "Preparing your transaction...",
+      });
+
+      // Get or derive encryption key on-demand (only prompts wallet if not already derived)
+      let key = encryptionKey;
+      if (!key) {
+        toast.loading("Signing for encryption...", {
+          id: loadingToast,
+          description: "Please sign the message to enable encryption.",
+        });
+        key = await initializeEncryption();
+      }
+
+      toast.loading("Processing transaction...", {
+        id: loadingToast,
         description: "Encrypting state and interacting with Solana...",
       });
+
+      // Initialize pool if not already initialized
+      if (!isPoolInitialized) {
+        toast.loading("Initializing lending pool...", {
+          id: loadingToast,
+          description: "Creating the lending pool on Solana...",
+        });
+        try {
+          await initializePool();
+          await refetchPool();
+        } catch (poolErr) {
+          // Pool might already exist or we don't have permission
+          console.warn("Pool initialization skipped or failed:", poolErr);
+          // Continue anyway - the pool might already exist
+        }
+      }
 
       let signature: string;
 
       switch (activeAction) {
         case "deposit":
-          signature = await depositCollateral(amount, encryptionKey);
+          signature = await depositCollateral(amount, key);
           break;
         case "borrow":
-          signature = await borrow(amount, encryptionKey);
+          signature = await borrow(amount, key);
           break;
         case "repay":
-          signature = await repay(amount, encryptionKey);
+          signature = await repay(amount, key);
           break;
         case "withdraw":
-          signature = await withdrawCollateral(amount, encryptionKey);
+          signature = await withdrawCollateral(amount, key);
           break;
         default:
           throw new Error("Unknown action");
@@ -165,6 +177,23 @@ export default function LendPage() {
           onChange={(id) => setActiveAction(id as Action)}
           className="mb-8"
         />
+
+        {/* Pool not initialized warning */}
+        {!poolLoading && !isPoolInitialized && (
+          <motion.div
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="mb-6 p-4 rounded-xl bg-yellow-500/10 border border-yellow-500/30 flex items-start gap-3"
+          >
+            <AlertTriangle className="w-5 h-5 text-yellow-500 flex-shrink-0 mt-0.5" />
+            <div>
+              <h4 className="text-sm font-semibold text-yellow-400 mb-1">Pool Not Initialized</h4>
+              <p className="text-xs text-yellow-200/70">
+                The lending pool hasn&apos;t been created yet. Your first deposit will automatically initialize the pool on Solana.
+              </p>
+            </div>
+          </motion.div>
+        )}
 
         <div className="card shadow-lg border-[var(--color-border-accent)]">
           <div className="mb-8">
